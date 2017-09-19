@@ -21,6 +21,7 @@ module Control.Lens.Internal.Fold
   -- * Monoids for folding
     Folding(..)
   , Traversed(..)
+  , TraversedA(..)
   , Sequenced(..)
   , Max(..), getMax
   , Min(..), getMin
@@ -83,6 +84,22 @@ instance (Apply f, Applicative f) => Monoid (Traversed a f) where
   {-# INLINE mappend #-}
 
 ------------------------------------------------------------------------------
+-- TraversedA
+------------------------------------------------------------------------------
+
+newtype TraversedA a m = TraversedA { getTraversedA :: m a }
+
+instance Applicative m => Semigroup (TraversedA a m) where
+  TraversedA ma <> TraversedA mb = TraversedA (ma *> mb)
+  {-# INLINE (<>) #-}
+
+instance Applicative m => Monoid (TraversedA a m) where
+  mempty = TraversedA (pure (error "Traversed: value used"))
+  {-# INLINE mempty #-}
+  TraversedA ma `mappend` TraversedA mb = TraversedA (ma *> mb)
+  {-# INLINE mappend #-}
+
+------------------------------------------------------------------------------
 -- Sequenced
 ------------------------------------------------------------------------------
 
@@ -91,11 +108,11 @@ instance (Apply f, Applicative f) => Monoid (Traversed a f) where
 -- The argument 'a' of the result should not be used!
 newtype Sequenced a m = Sequenced { getSequenced :: m a }
 
-instance Apply m => Semigroup (Sequenced a m) where
-  Sequenced ma <> Sequenced mb = Sequenced (ma .> mb)
+instance Monad m => Semigroup (Sequenced a m) where
+  Sequenced ma <> Sequenced mb = Sequenced (ma >> mb)
   {-# INLINE (<>) #-}
 
-instance (Apply m, Applicative m, Monad m) => Monoid (Sequenced a m) where
+instance  Monad m => Monoid (Sequenced a m) where
   mempty = Sequenced (return (error "Sequenced: value used"))
   {-# INLINE mempty #-}
   Sequenced ma `mappend` Sequenced mb = Sequenced (ma >> mb)
