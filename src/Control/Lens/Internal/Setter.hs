@@ -26,6 +26,7 @@ import Data.Distributive
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Profunctor
+import Data.Functor.Rep
 import Data.Profunctor.Unsafe
 import Data.Traversable
 import Prelude
@@ -35,12 +36,16 @@ import Prelude
 -----------------------------------------------------------------------------
 
 -- | Anything 'Settable' must be isomorphic to the 'Identity' 'Functor'.
-class (Applicative f, Distributive f, Traversable f) => Settable f where
+--
+-- __screw that__. Representable is good. No need to 'Traversable' either.
+class (Applicative f, Representable f) => Settable f where
+{-
   untainted :: f a -> a
 
   untaintedDot :: Profunctor p => p a (f b) -> p a b
   untaintedDot g = g `seq` rmap untainted g
   {-# INLINE untaintedDot #-}
+-}
 
   taintedDot :: Profunctor p => p a b -> p a (f b)
   taintedDot g = g `seq` rmap pure g
@@ -48,19 +53,25 @@ class (Applicative f, Distributive f, Traversable f) => Settable f where
 
 -- | So you can pass our 'Control.Lens.Setter.Setter' into combinators from other lens libraries.
 instance Settable Identity where
+{-
   untainted = runIdentity
   {-# INLINE untainted #-}
   untaintedDot = (runIdentity #.)
   {-# INLINE untaintedDot #-}
+-}
   taintedDot = (Identity #.)
   {-# INLINE taintedDot #-}
 
 -- | 'Control.Lens.Fold.backwards'
 instance Settable f => Settable (Backwards f) where
+{-
   untainted = untaintedDot forwards
   {-# INLINE untainted #-}
+-}
 
 instance (Settable f, Settable g) => Settable (Compose f g) where
+{-
   untainted = untaintedDot (untaintedDot getCompose)
   {-# INLINE untainted #-}
+-}
 

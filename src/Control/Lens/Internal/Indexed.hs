@@ -63,6 +63,8 @@ import Data.Profunctor.Unsafe
 import Control.Lens.Internal.Coerce
 #endif
 
+import qualified Data.Functor.Rep as R
+
 -- $setup
 -- >>> :set -XNoOverloadedStrings
 -- >>> import Control.Lens
@@ -77,7 +79,7 @@ import Control.Lens.Internal.Coerce
 -- to the preservation of limits and colimits.
 class
   ( Choice p, Corepresentable p, Comonad (Corep p), Traversable (Corep p)
-  , Strong p, Representable p, Monad (Rep p), MonadFix (Rep p), Distributive (Rep p)
+  , Strong p, Representable p, Monad (Rep p), MonadFix (Rep p), R.Representable (Rep p)
   , Costrong p, ArrowLoop p, ArrowApply p, ArrowChoice p, Closed p
   ) => Conjoined p where
 

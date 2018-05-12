@@ -94,6 +94,8 @@ import Data.Profunctor.Rep
 import Data.Profunctor.Sieve
 import Data.Profunctor.Unsafe
 import Prelude
+import qualified Data.Functor.Rep as R
+import Data.Functor.Compose (Compose (..))
 
 #ifdef HLINT
 {-# ANN module "HLint: ignore Avoid lambda" #-}
@@ -283,7 +285,15 @@ argument = sets lmap
 -- 'setting' :: ((a -> b) -> s -> t) -> 'Setter' s t a b
 -- @
 setting :: ((a -> b) -> s -> t) -> IndexPreservingSetter s t a b
-setting l pafb = cotabulate $ \ws -> pure $ l (\a -> untainted (cosieve pafb (a <$ ws))) (extract ws)
+setting l = tabulate
+          -- it type checks, it have to be correct.
+          . (\fab s -> getCompose $ R.tabulate $ \r -> l (\a -> R.index (Compose (fab a)) r) s)
+          . sieve
+
+fromASetter :: ASetter s t a b -> (a -> b) -> s -> t
+fromASetter l ab = runIdentity #. l (Identity #. ab)
+
+-- pure $ l (\a -> untainted (cosieve pafb (a <$ ws))) (extract ws)
 {-# INLINE setting #-}
 
 -- | Build a 'Setter', 'IndexedSetter' or 'IndexPreservingSetter' depending on your choice of 'Profunctor'.
@@ -292,23 +302,23 @@ setting l pafb = cotabulate $ \ws -> pure $ l (\a -> untainted (cosieve pafb (a 
 -- 'sets' :: ((a -> b) -> s -> t) -> 'Setter' s t a b
 -- @
 sets :: (Profunctor p, Profunctor q, Settable f) => (p a b -> q s t) -> Optical p q f s t a b
-sets f g = taintedDot (f (untaintedDot g))
+sets f g = undefined -- this is hard, have to ask from profunctors more.
 {-# INLINE sets #-}
 
 -- | Restore 'ASetter' to a full 'Setter'.
 cloneSetter :: ASetter s t a b -> Setter s t a b
-cloneSetter l afb = taintedDot $ runIdentity #. l (Identity #. untaintedDot afb)
+cloneSetter l f s = R.tabulate $ \r ->
+    runIdentity (l (Identity . flip R.index r . f) s)
 {-# INLINE cloneSetter #-}
 
 -- | Build an 'IndexPreservingSetter' from any 'Setter'.
 cloneIndexPreservingSetter :: ASetter s t a b -> IndexPreservingSetter s t a b
-cloneIndexPreservingSetter l pafb = cotabulate $ \ws ->
-    taintedDot runIdentity $ l (\a -> Identity (untainted (cosieve pafb (a <$ ws)))) (extract ws)
+cloneIndexPreservingSetter = setting . fromASetter -- everything else is an optimisation
 {-# INLINE cloneIndexPreservingSetter #-}
 
 -- | Clone an 'IndexedSetter'.
 cloneIndexedSetter :: AnIndexedSetter i s t a b -> IndexedSetter i s t a b
-cloneIndexedSetter l pafb = taintedDot (runIdentity #. l (Indexed $ \i -> Identity #. untaintedDot (indexed pafb i)))
+cloneIndexedSetter = undefined -- left as an exercise
 {-# INLINE cloneIndexedSetter #-}
 
 -----------------------------------------------------------------------------

@@ -64,6 +64,7 @@ module Control.Lens.Type
   , IndexedLensLike, IndexedLensLike'
   , Optical, Optical'
   , Optic, Optic'
+  , (<==<)
   ) where
 
 import Control.Applicative
@@ -78,6 +79,7 @@ import Data.Kind
 #endif
 import Data.Profunctor
 import Data.Tagged
+import Data.Functor.Rep
 import Prelude ()
 
 -- $setup
@@ -274,7 +276,7 @@ type IndexPreservingTraversal1' s a = IndexPreservingTraversal1 s s a a
 --
 -- @
 -- l 'pure' ≡ 'pure'
--- l f '.' 'untainted' '.' l g ≡ l (f '.' 'untainted' '.' g)
+-- l f '<==<' l g ≡ l (f '<==<' g)
 -- @
 --
 -- You can compose a 'Setter' with a 'Lens' or a 'Traversal' using ('.') from the @Prelude@
@@ -295,6 +297,9 @@ type IndexPreservingTraversal1' s a = IndexPreservingTraversal1 s s a a
 -- >>> over (traverse.both) f [(a,b),(c,d)]
 -- [(f a,f b),(f c,f d)]
 type Setter s t a b = forall f. Settable f => (a -> f b) -> s -> f t
+
+(<==<) :: Representable f => (b -> f c) -> (a -> f b) -> a -> f c
+(f <==< g) x = bindRep (g x) f
 
 -- | A 'Setter'' is just a 'Setter' that doesn't change the types.
 --
