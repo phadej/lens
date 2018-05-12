@@ -73,6 +73,8 @@ module Control.Lens.Setter
   -- * Exported for legible error messages
   , Settable
   , Identity(..)
+  -- fancy
+  , setMany
   -- * Deprecated
   , mapOf
   ) where
@@ -101,6 +103,19 @@ import Data.Functor.Compose (Compose (..))
 {-# ANN module "HLint: ignore Avoid lambda" #-}
 {-# ANN module "HLint: ignore Use fmap" #-}
 #endif
+
+type AMultiSetter rep s t a b = (a -> rep -> b) -> s -> rep -> t
+
+-- | Distribute values inside and collect all the new copies.
+--
+-- >>> let v2 x y = Identity 'x' :*: Identity y
+-- >>> setMany (_2 . traverse) (v2 'x' 'y') (True, [1,2,3 :: Int])
+-- Identity (True,"xxx") :*: Identity (True,"yyy")
+--
+setMany :: R.Representable f
+        => AMultiSetter (R.Rep f) s t a b
+        -> f b -> s -> f t
+setMany l b = R.tabulate . l (\_ -> R.index b)
 
 -- $setup
 -- >>> import Control.Lens
@@ -287,7 +302,8 @@ argument = sets lmap
 setting :: ((a -> b) -> s -> t) -> IndexPreservingSetter s t a b
 setting l = tabulate
           -- it type checks, it have to be correct.
-          . (\fab s -> getCompose $ R.tabulate $ \r -> l (\a -> R.index (Compose (fab a)) r) s)
+          . (\fab s -> getCompose $ R.tabulate $ \r ->
+                l (\a -> R.index (Compose (fab a)) r) s)
           . sieve
 
 fromASetter :: ASetter s t a b -> (a -> b) -> s -> t
